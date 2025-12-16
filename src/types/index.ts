@@ -47,27 +47,99 @@ export interface Event {
   endDate: string;
   points: number;
   maxScansPerUser: number;
+  checkInIntervalMinutes?: number; // Minimum interval between check-ins (only when maxScansPerUser > 1)
   qrCodeSecret: string;
   qrCodeExpiresAt: string;
   image?: string;
   location?: string;
 }
 
+// Point transaction types
+export type PointTransactionType =
+  | 'event_checkin'      // Earning points from event scan
+  | 'purchase'           // Spending points on fridge items
+  | 'transfer_sent'      // Sending points to another user
+  | 'transfer_received'  // Receiving points from another user
+  | 'admin_adjustment';  // Manual admin adjustment
+
 // Point transaction interface
 export interface PointTransaction {
   id: string;
   userId: string;
-  eventId: string;
-  points: number;
+  type: PointTransactionType;
+  points: number;                    // Positive for gains, negative for spending/sending
   timestamp: string;
-  scanCount: number;
+  // Event-related (for event_checkin)
+  eventId?: string;
+  scanCount?: number;
+  // Transfer-related (for transfer_sent/transfer_received)
+  relatedUserId?: string;            // The other party in the transfer
+  transferId?: string;               // Links sent/received transactions
+  // Purchase-related (for purchase)
+  orderId?: string;
+  // Admin adjustment (for admin_adjustment)
+  reason?: string;
 }
 
-// QR Code data interface
-export interface QRCodeData {
+// QR Code data interfaces
+export interface EventQRData {
   eventId: string;
   secret: string;
   timestamp: number;
+}
+
+export interface MembershipQRData {
+  type: 'membership';
+  userId: string;
+  registration: string;
+  timestamp: number;
+}
+
+export interface FridgeOrderQRData {
+  type: 'fridge_order';
+  orderId: string;
+  secret: string;
+  totalPoints: number;
+}
+
+// Fridge Product
+export type FridgeCategory = 'Bebidas' | 'Snacks' | 'Refeicoes';
+
+export interface FridgeProduct {
+  id: string;
+  name: string;
+  description: string;
+  category: FridgeCategory;
+  pricePoints: number;
+  stockQuantity: number;
+  image: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Fridge Order
+export type FridgeOrderStatus = 'pending_payment' | 'paid' | 'collected' | 'cancelled';
+
+export interface FridgeOrderItem {
+  productId: string;
+  productName: string;       // Snapshot at time of order
+  pricePoints: number;       // Snapshot at time of order
+  quantity: number;
+}
+
+export interface FridgeOrder {
+  id: string;
+  userId?: string;           // Null until payment (kiosk creates order before auth)
+  items: FridgeOrderItem[];
+  totalPoints: number;
+  status: FridgeOrderStatus;
+  qrCodeSecret: string;
+  qrCodeExpiresAt: string;   // 5 minutes from creation
+  createdAt: string;
+  paidAt?: string;
+  collectedAt?: string;
+  cancelledAt?: string;
 }
 
 // Auth state
@@ -86,12 +158,15 @@ export interface AppState {
   bookings: Booking[];
   events: Event[];
   pointTransactions: PointTransaction[];
+  fridgeProducts: FridgeProduct[];
+  fridgeOrders: FridgeOrder[];
 
   // User actions
   addUser: (user: Omit<User, 'id' | 'createdAt' | 'validUntil' | 'points'>) => User;
   updateUser: (id: string, user: Partial<User>) => void;
   deleteUser: (id: string) => void;
   getUserById: (id: string) => User | undefined;
+  getUserByRegistration: (registration: string) => User | undefined;
 
   // Space actions
   addSpace: (space: Omit<Space, 'id'>) => Space;
@@ -120,6 +195,25 @@ export interface AppState {
   getUserPoints: (userId: string) => number;
   getUserPointHistory: (userId: string) => PointTransaction[];
   adjustUserPoints: (userId: string, points: number, reason: string) => void;
+  transferPoints: (fromUserId: string, toUserId: string, points: number) => { success: boolean; message: string };
+
+  // Fridge Product actions
+  addFridgeProduct: (product: Omit<FridgeProduct, 'id' | 'createdAt' | 'updatedAt'>) => FridgeProduct;
+  updateFridgeProduct: (id: string, product: Partial<FridgeProduct>) => void;
+  deleteFridgeProduct: (id: string) => void;
+  getFridgeProductById: (id: string) => FridgeProduct | undefined;
+  getActiveFridgeProducts: () => FridgeProduct[];
+  updateProductStock: (productId: string, quantityChange: number) => void;
+
+  // Fridge Order actions
+  createFridgeOrder: (items: FridgeOrderItem[]) => FridgeOrder;
+  getFridgeOrderById: (id: string) => FridgeOrder | undefined;
+  payFridgeOrder: (userId: string, orderId: string, qrSecret: string) => { success: boolean; message: string };
+  cancelFridgeOrder: (orderId: string) => void;
+  markOrderCollected: (orderId: string) => void;
+  getOrdersByStatus: (status: FridgeOrderStatus) => FridgeOrder[];
+  getOrdersByUser: (userId: string) => FridgeOrder[];
+  cleanupExpiredOrders: () => void;
 
   // Initialize data
   initializeData: () => void;

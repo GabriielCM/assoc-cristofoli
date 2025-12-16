@@ -23,6 +23,7 @@ export const EventsManagement: React.FC = () => {
     endDate: '',
     points: 10,
     maxScansPerUser: 1,
+    checkInIntervalMinutes: 60,
     image: '',
     location: ''
   });
@@ -53,6 +54,7 @@ export const EventsManagement: React.FC = () => {
       endDate: new Date(formData.endDate).toISOString(),
       points: formData.points,
       maxScansPerUser: formData.maxScansPerUser,
+      checkInIntervalMinutes: formData.maxScansPerUser > 1 ? formData.checkInIntervalMinutes : undefined,
       image: formData.image || undefined,
       location: formData.location || undefined
     };
@@ -78,6 +80,7 @@ export const EventsManagement: React.FC = () => {
       endDate: format(parseISO(event.endDate), "yyyy-MM-dd'T'HH:mm"),
       points: event.points,
       maxScansPerUser: event.maxScansPerUser,
+      checkInIntervalMinutes: event.checkInIntervalMinutes || 60,
       image: event.image || '',
       location: event.location || ''
     });
@@ -110,6 +113,7 @@ export const EventsManagement: React.FC = () => {
       endDate: '',
       points: 10,
       maxScansPerUser: 1,
+      checkInIntervalMinutes: 60,
       image: '',
       location: ''
     });
@@ -285,6 +289,18 @@ export const EventsManagement: React.FC = () => {
                 required
               />
             </div>
+
+            {formData.maxScansPerUser > 1 && (
+              <Input
+                label="Intervalo entre Check-ins (minutos)"
+                type="number"
+                min="1"
+                value={formData.checkInIntervalMinutes}
+                onChange={(e) => setFormData({ ...formData, checkInIntervalMinutes: parseInt(e.target.value) || 60 })}
+                required
+                helperText="Tempo mínimo que o usuário deve aguardar entre cada check-in"
+              />
+            )}
 
             <Input
               label="Local (opcional)"

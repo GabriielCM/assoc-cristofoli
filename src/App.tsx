@@ -4,14 +4,22 @@ import { useAuthStore } from './store/useAuthStore';
 
 // Pages
 import { Login } from './pages/Login';
-import { Home, Spaces, Membership, Events, Points, Profile } from './pages/user';
+import { Home, Spaces, Membership, Events, Points, Profile, Transfer, PayFridge } from './pages/user';
 import {
   AdminDashboard,
   UsersManagement,
   SpacesManagement,
   EventsManagement,
-  BookingsManagement
+  BookingsManagement,
+  FridgeManagement
 } from './pages/admin';
+import {
+  KioskHome,
+  KioskProducts,
+  KioskCart,
+  KioskPayment,
+  KioskSuccess
+} from './pages/kiosk';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -113,6 +121,22 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/transfer"
+          element={
+            <ProtectedRoute>
+              <Transfer />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pay"
+          element={
+            <ProtectedRoute>
+              <PayFridge />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Admin Routes */}
         <Route
@@ -155,6 +179,21 @@ function App() {
             </AdminRoute>
           }
         />
+        <Route
+          path="/admin/fridge"
+          element={
+            <AdminRoute>
+              <FridgeManagement />
+            </AdminRoute>
+          }
+        />
+
+        {/* Kiosk Routes (public - no auth required) */}
+        <Route path="/kiosk" element={<KioskHome />} />
+        <Route path="/kiosk/products" element={<KioskProducts />} />
+        <Route path="/kiosk/cart" element={<KioskCart />} />
+        <Route path="/kiosk/payment/:orderId" element={<KioskPayment />} />
+        <Route path="/kiosk/success/:orderId" element={<KioskSuccess />} />
 
         {/* Catch all - redirect to home */}
         <Route path="*" element={<Navigate to="/" replace />} />

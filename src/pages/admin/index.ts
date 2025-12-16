@@ -3,3 +3,4 @@ export { UsersManagement } from './UsersManagement';
 export { SpacesManagement } from './SpacesManagement';
 export { EventsManagement } from './EventsManagement';
 export { BookingsManagement } from './BookingsManagement';
+export { FridgeManagement } from './FridgeManagement';

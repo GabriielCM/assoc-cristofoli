@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Building2, CreditCard, Calendar, Star, Users, Settings, LayoutDashboard, X } from 'lucide-react';
+import { Home, Building2, CreditCard, Calendar, Star, Users, Settings, LayoutDashboard, X, Refrigerator } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 
 interface SidebarProps {
@@ -28,7 +28,8 @@ const adminNavItems: NavItem[] = [
   { path: '/admin/users', icon: <Users className="w-5 h-5" />, label: 'Usuários' },
   { path: '/admin/spaces', icon: <Building2 className="w-5 h-5" />, label: 'Espaços' },
   { path: '/admin/events', icon: <Calendar className="w-5 h-5" />, label: 'Eventos' },
-  { path: '/admin/bookings', icon: <Settings className="w-5 h-5" />, label: 'Locações' }
+  { path: '/admin/bookings', icon: <Settings className="w-5 h-5" />, label: 'Locações' },
+  { path: '/admin/fridge', icon: <Refrigerator className="w-5 h-5" />, label: 'Geladeira' }
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {

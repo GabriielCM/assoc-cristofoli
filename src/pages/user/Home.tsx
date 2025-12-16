@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, CreditCard, Calendar, Star, ChevronRight, TrendingUp } from 'lucide-react';
+import { Building2, CreditCard, Calendar, Star, ChevronRight, TrendingUp, Refrigerator } from 'lucide-react';
 import { Layout } from '../../components/layout';
 import { Card, Badge } from '../../components/ui';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -28,8 +28,8 @@ export const Home: React.FC = () => {
   const quickActions = [
     {
       icon: <Building2 className="w-6 h-6" />,
-      label: 'Locar Espaço',
-      description: 'Reserve um espaço',
+      label: 'Locar Espaco',
+      description: 'Reserve um espaco',
       path: '/spaces',
       color: 'bg-primary-500'
     },
@@ -46,6 +46,13 @@ export const Home: React.FC = () => {
       description: 'Participar e ganhar pontos',
       path: '/events',
       color: 'bg-accent-500'
+    },
+    {
+      icon: <Refrigerator className="w-6 h-6" />,
+      label: 'Geladeira',
+      description: 'Pagar com pontos',
+      path: '/pay',
+      color: 'bg-cyan-500'
     },
     {
       icon: <Star className="w-6 h-6" />,
@@ -81,7 +88,7 @@ export const Home: React.FC = () => {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
           {quickActions.map((action) => (
             <Card
               key={action.path}
