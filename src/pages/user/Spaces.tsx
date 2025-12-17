@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Check, Calendar as CalendarIcon } from 'lucide-react';
 import { Layout } from '../../components/layout';
-import { Card, Button, Badge, Modal, Alert } from '../../components/ui';
+import { Card, Button, Badge, Modal, Alert, Loader } from '../../components/ui';
 import { useStore } from '../../store/useStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { format, addDays, parseISO, isBefore, startOfDay } from 'date-fns';
@@ -9,7 +9,12 @@ import { ptBR } from 'date-fns/locale';
 import type { Space, Booking } from '../../types';
 
 export const Spaces: React.FC = () => {
-  const { spaces, addBooking, getBookingsByUser, isDateAvailable, cancelBooking } = useStore();
+  const { spaces, fetchSpaces, fetchBookings, addBooking, getBookingsByUser, isDateAvailable, cancelBooking, isLoading } = useStore();
+
+  useEffect(() => {
+    fetchSpaces();
+    fetchBookings();
+  }, [fetchSpaces, fetchBookings]);
   const { user } = useAuthStore();
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
@@ -88,6 +93,11 @@ export const Spaces: React.FC = () => {
         </div>
 
         {/* Spaces Grid */}
+        {isLoading && spaces.length === 0 ? (
+          <div className="flex justify-center py-12">
+            <Loader size="lg" />
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {spaces.map((space) => (
             <Card key={space.id} className="overflow-hidden p-0">
@@ -147,6 +157,7 @@ export const Spaces: React.FC = () => {
             </Card>
           ))}
         </div>
+        )}
 
         {/* Booking Modal */}
         <Modal

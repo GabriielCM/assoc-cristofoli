@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Star, Calendar, TrendingUp, Award, Clock, Send, ArrowDownLeft, ArrowUpRight, ShoppingCart, Settings } from 'lucide-react';
 import { Layout } from '../../components/layout';
@@ -45,8 +45,16 @@ const getTransactionBgColor = (type: PointTransactionType) => {
 
 export const Points: React.FC = () => {
   const navigate = useNavigate();
-  const { events, getUserPointHistory, users, getUserById } = useStore();
+  const { events, fetchEvents, fetchUsers, fetchPointHistory, getUserPointHistory, users, getUserById } = useStore();
   const { user } = useAuthStore();
+
+  useEffect(() => {
+    fetchEvents();
+    fetchUsers();
+    if (user) {
+      fetchPointHistory(user.id);
+    }
+  }, [fetchEvents, fetchUsers, fetchPointHistory, user]);
 
   if (!user) return null;
 

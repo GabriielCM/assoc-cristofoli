@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Check, X, Calendar, Search, Filter } from 'lucide-react';
 import { Layout } from '../../components/layout';
 import { Card, Button, Badge, Modal, Input, Select, Alert } from '../../components/ui';
@@ -8,7 +8,13 @@ import { ptBR } from 'date-fns/locale';
 import type { Booking } from '../../types';
 
 export const BookingsManagement: React.FC = () => {
-  const { bookings, spaces, users, updateBooking, cancelBooking } = useStore();
+  const { bookings, spaces, users, fetchBookings, fetchSpaces, fetchUsers, updateBooking, cancelBooking } = useStore();
+
+  useEffect(() => {
+    fetchBookings();
+    fetchSpaces();
+    fetchUsers();
+  }, [fetchBookings, fetchSpaces, fetchUsers]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showModal, setShowModal] = useState(false);

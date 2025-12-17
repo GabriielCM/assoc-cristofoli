@@ -10,8 +10,16 @@ import { ptBR } from 'date-fns/locale';
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { users, spaces, events, bookings, pointTransactions, refreshEventQRCode, getActiveEvents } = useStore();
+  const { users, spaces, events, bookings, pointTransactions, fetchUsers, fetchSpaces, fetchEvents, fetchBookings, refreshEventQRCode, getActiveEvents } = useStore();
   const [, setRefresh] = useState(0);
+
+  // Fetch data on mount
+  useEffect(() => {
+    fetchUsers();
+    fetchSpaces();
+    fetchEvents();
+    fetchBookings();
+  }, [fetchUsers, fetchSpaces, fetchEvents, fetchBookings]);
 
   const activeEvents = getActiveEvents();
 

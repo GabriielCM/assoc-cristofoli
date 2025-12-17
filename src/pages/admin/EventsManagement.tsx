@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Plus, Edit, Trash2, Star, Calendar, Clock, QrCode, RefreshCw, Users } from 'lucide-react';
 import { Layout } from '../../components/layout';
@@ -9,7 +9,11 @@ import { ptBR } from 'date-fns/locale';
 import type { Event } from '../../types';
 
 export const EventsManagement: React.FC = () => {
-  const { events, addEvent, updateEvent, deleteEvent, refreshEventQRCode, pointTransactions } = useStore();
+  const { events, fetchEvents, addEvent, updateEvent, deleteEvent, refreshEventQRCode, pointTransactions } = useStore();
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
   const [showModal, setShowModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Search, Package, Star, Power, PowerOff } from 'lucide-react';
 import { Layout } from '../../components/layout';
 import { Card, Button, Badge, Modal, Input, Select, Alert } from '../../components/ui';
@@ -12,7 +12,12 @@ const CATEGORIES: { value: FridgeCategory; label: string }[] = [
 ];
 
 export const FridgeManagement: React.FC = () => {
-  const { fridgeProducts, addFridgeProduct, updateFridgeProduct, deleteFridgeProduct, fridgeOrders } = useStore();
+  const { fridgeProducts, fetchFridgeProducts, addFridgeProduct, updateFridgeProduct, deleteFridgeProduct, fridgeOrders, fetchFridgeOrders } = useStore();
+
+  useEffect(() => {
+    fetchFridgeProducts();
+    fetchFridgeOrders();
+  }, [fetchFridgeProducts, fetchFridgeOrders]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<FridgeCategory | 'all'>('all');
   const [showModal, setShowModal] = useState(false);

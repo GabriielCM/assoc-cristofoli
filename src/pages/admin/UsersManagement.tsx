@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserPlus, Edit, Trash2, Search, Star, Shield } from 'lucide-react';
 import { Layout } from '../../components/layout';
-import { Card, Button, Badge, Modal, Input, Select, Alert } from '../../components/ui';
+import { Card, Button, Badge, Modal, Input, Select, Alert, Loader } from '../../components/ui';
 import { useStore } from '../../store/useStore';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { User, UserRole } from '../../types';
 
 export const UsersManagement: React.FC = () => {
-  const { users, addUser, updateUser, deleteUser, adjustUserPoints } = useStore();
+  const { users, fetchUsers, addUser, updateUser, deleteUser, adjustUserPoints, isLoading } = useStore();
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showPointsModal, setShowPointsModal] = useState(false);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, CreditCard, Calendar, Star, ChevronRight, TrendingUp, Refrigerator } from 'lucide-react';
 import { Layout } from '../../components/layout';
@@ -11,7 +11,13 @@ import { ptBR } from 'date-fns/locale';
 export const Home: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { spaces, events, getBookingsByUser } = useStore();
+  const { spaces, events, fetchSpaces, fetchEvents, fetchBookings, getBookingsByUser } = useStore();
+
+  useEffect(() => {
+    fetchSpaces();
+    fetchEvents();
+    fetchBookings();
+  }, [fetchSpaces, fetchEvents, fetchBookings]);
 
   const userBookings = user ? getBookingsByUser(user.id) : [];
   const upcomingBookings = userBookings.filter(

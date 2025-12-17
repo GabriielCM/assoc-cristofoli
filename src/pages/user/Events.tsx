@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Calendar, Clock, MapPin, Star, QrCode, X, Camera } from 'lucide-react';
 import { Layout } from '../../components/layout';
-import { Card, Button, Badge, Modal, Alert } from '../../components/ui';
+import { Card, Button, Badge, Modal, Alert, Loader } from '../../components/ui';
 import { useStore } from '../../store/useStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { format, parseISO, isWithinInterval, isBefore, isAfter } from 'date-fns';
@@ -10,8 +10,15 @@ import { ptBR } from 'date-fns/locale';
 import type { Event } from '../../types';
 
 export const Events: React.FC = () => {
-  const { events, scanEventQR, pointTransactions } = useStore();
+  const { events, fetchEvents, fetchPointHistory, scanEventQR, pointTransactions, isLoading } = useStore();
   const { user } = useAuthStore();
+
+  useEffect(() => {
+    fetchEvents();
+    if (user) {
+      fetchPointHistory(user.id);
+    }
+  }, [fetchEvents, fetchPointHistory, user]);
   const [showScanner, setShowScanner] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
@@ -264,8 +271,15 @@ export const Events: React.FC = () => {
           </section>
         )}
 
+        {/* Loading */}
+        {isLoading && events.length === 0 && (
+          <div className="flex justify-center py-12">
+            <Loader size="lg" />
+          </div>
+        )}
+
         {/* No Events */}
-        {events.length === 0 && (
+        {!isLoading && events.length === 0 && (
           <Card className="text-center py-12">
             <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-800">Nenhum evento disponível</h3>

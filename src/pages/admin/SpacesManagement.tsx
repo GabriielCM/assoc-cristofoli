@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Users, DollarSign } from 'lucide-react';
 import { Layout } from '../../components/layout';
 import { Card, Button, Badge, Modal, Input, TextArea, Alert } from '../../components/ui';
@@ -6,7 +6,12 @@ import { useStore } from '../../store/useStore';
 import type { Space } from '../../types';
 
 export const SpacesManagement: React.FC = () => {
-  const { spaces, addSpace, updateSpace, deleteSpace, bookings } = useStore();
+  const { spaces, fetchSpaces, addSpace, updateSpace, deleteSpace, bookings, fetchBookings } = useStore();
+
+  useEffect(() => {
+    fetchSpaces();
+    fetchBookings();
+  }, [fetchSpaces, fetchBookings]);
   const [showModal, setShowModal] = useState(false);
   const [editingSpace, setEditingSpace] = useState<Space | null>(null);
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
