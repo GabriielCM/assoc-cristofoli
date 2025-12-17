@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ahub-v1';
+const CACHE_NAME = 'ahub-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -19,6 +19,11 @@ self.addEventListener('install', (event) => {
 
 // Fetch event
 self.addEventListener('fetch', (event) => {
+  // Don't intercept API requests at all - let them go directly to the network
+  if (event.request.url.includes('/api/') || event.request.url.includes(':3001')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -39,10 +44,7 @@ self.addEventListener('fetch', (event) => {
 
             caches.open(CACHE_NAME)
               .then((cache) => {
-                // Don't cache API requests
-                if (!event.request.url.includes('/api/')) {
-                  cache.put(event.request, responseToCache);
-                }
+                cache.put(event.request, responseToCache);
               });
 
             return response;
