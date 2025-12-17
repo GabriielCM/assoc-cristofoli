@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Users, Check, Calendar as CalendarIcon } from 'lucide-react';
 import { Layout } from '../../components/layout';
 import { Card, Button, Badge, Modal, Alert, Loader } from '../../components/ui';
@@ -9,7 +9,7 @@ import { ptBR } from 'date-fns/locale';
 import type { Space, Booking } from '../../types';
 
 export const Spaces: React.FC = () => {
-  const { spaces, fetchSpaces, fetchBookings, addBooking, getBookingsByUser, isDateAvailable, cancelBooking, isLoading } = useStore();
+  const { spaces, bookings, fetchSpaces, fetchBookings, addBooking, getBookingsByUser, cancelBooking, isLoading } = useStore();
 
   useEffect(() => {
     fetchSpaces();
@@ -24,15 +24,12 @@ export const Spaces: React.FC = () => {
 
   const userBookings = user ? getBookingsByUser(user.id) : [];
 
-  const handleBookSpace = () => {
+  const handleBookSpace = async () => {
     if (!selectedSpace || !selectedDate || !user) return;
 
-    const result = addBooking({
+    const result = await addBooking({
       spaceId: selectedSpace.id,
-      userId: user.id,
-      date: selectedDate,
-      status: 'pending',
-      totalPrice: selectedSpace.price
+      date: selectedDate
     });
 
     if (result) {
@@ -61,13 +58,19 @@ export const Spaces: React.FC = () => {
   };
 
   // Generate available dates (next 60 days)
-  const availableDates = Array.from({ length: 60 }, (_, i) => {
-    const date = addDays(new Date(), i + 1);
-    return format(date, 'yyyy-MM-dd');
-  }).filter((date) => {
-    if (!selectedSpace) return true;
-    return isDateAvailable(selectedSpace.id, date);
-  });
+  const availableDates = useMemo(() => {
+    return Array.from({ length: 60 }, (_, i) => {
+      const date = addDays(new Date(), i + 1);
+      return format(date, 'yyyy-MM-dd');
+    }).filter((date) => {
+      if (!selectedSpace) return true;
+      // Check availability against loaded bookings
+      const hasConflict = bookings.some(
+        (b) => b.spaceId === selectedSpace.id && b.date === date && b.status !== 'cancelled'
+      );
+      return !hasConflict;
+    });
+  }, [selectedSpace, bookings]);
 
   return (
     <Layout title="Espaços">

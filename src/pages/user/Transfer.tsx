@@ -5,13 +5,14 @@ import { Layout } from '../../components/layout';
 import { Card, Button, Input, Modal, Alert, Avatar } from '../../components/ui';
 import { useStore } from '../../store/useStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import type { User as UserType } from '../../types';
+
+type UserWithoutPassword = Omit<import('../../types').User, 'password'>;
 
 export const Transfer: React.FC = () => {
   const { transferPoints, getUserByRegistration, getUserById } = useStore();
   const { user, updateUser } = useAuthStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserWithoutPassword | null>(null);
   const [amount, setAmount] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -27,13 +28,13 @@ export const Transfer: React.FC = () => {
     };
   }, []);
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!searchTerm.trim()) {
       setAlert({ type: 'error', message: 'Digite uma matrícula para buscar.' });
       return;
     }
 
-    const foundUser = getUserByRegistration(searchTerm.trim());
+    const foundUser = await getUserByRegistration(searchTerm.trim());
 
     if (!foundUser) {
       setAlert({ type: 'error', message: 'Usuário não encontrado com esta matrícula.' });
@@ -51,8 +52,7 @@ export const Transfer: React.FC = () => {
     setAlert(null);
   };
 
-  const startScanner = async () => {
-    setScanning(true);
+  const initScanner = async () => {
     try {
       const html5QrCode = new Html5Qrcode('qr-reader-transfer');
       scannerRef.current = html5QrCode;
@@ -68,8 +68,10 @@ export const Transfer: React.FC = () => {
         },
         () => {}
       );
+      setScanning(true);
     } catch (err) {
-      setAlert({ type: 'error', message: 'Não foi possível acessar a câmera.' });
+      console.error('Camera error:', err);
+      setAlert({ type: 'error', message: 'Não foi possível acessar a câmera. Verifique as permissões do navegador.' });
       setScanning(false);
     }
   };
@@ -121,10 +123,10 @@ export const Transfer: React.FC = () => {
   };
 
   useEffect(() => {
-    if (showScanner && !scanning) {
+    if (showScanner && !scanning && !scannerRef.current) {
       const timer = setTimeout(() => {
-        startScanner();
-      }, 500);
+        initScanner();
+      }, 100);
       return () => clearTimeout(timer);
     }
   }, [showScanner]);
@@ -150,11 +152,11 @@ export const Transfer: React.FC = () => {
     setShowConfirmModal(true);
   };
 
-  const handleConfirmTransfer = () => {
+  const handleConfirmTransfer = async () => {
     if (!user || !selectedUser) return;
 
     const pointsToSend = parseInt(amount);
-    const result = transferPoints(user.id, selectedUser.id, pointsToSend);
+    const result = await transferPoints(selectedUser.id, pointsToSend);
 
     if (result.success) {
       setAlert({ type: 'success', message: result.message });

@@ -25,9 +25,7 @@ export const PayFridge: React.FC = () => {
     };
   }, []);
 
-  const startScanner = async () => {
-    setScanning(true);
-    setAlert(null);
+  const initScanner = async () => {
     try {
       const html5QrCode = new Html5Qrcode('qr-reader-pay');
       scannerRef.current = html5QrCode;
@@ -44,9 +42,25 @@ export const PayFridge: React.FC = () => {
         () => {}
       );
     } catch (err) {
-      setAlert({ type: 'error', message: 'Nao foi possivel acessar a camera.' });
+      console.error('Camera error:', err);
+      setAlert({ type: 'error', message: 'Nao foi possivel acessar a camera. Verifique as permissoes do navegador.' });
       setScanning(false);
     }
+  };
+
+  // Wait for DOM element to exist before starting scanner
+  useEffect(() => {
+    if (scanning && !scannerRef.current) {
+      const timer = setTimeout(() => {
+        initScanner();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [scanning]);
+
+  const startScanner = () => {
+    setScanning(true);
+    setAlert(null);
   };
 
   const stopScanner = async () => {
@@ -101,10 +115,10 @@ export const PayFridge: React.FC = () => {
     }
   };
 
-  const handleConfirmPayment = () => {
+  const handleConfirmPayment = async () => {
     if (!user || !scannedOrder) return;
 
-    const result = payFridgeOrder(user.id, scannedOrder.id, scannedOrder.qrCodeSecret);
+    const result = await payFridgeOrder(scannedOrder.id, scannedOrder.qrCodeSecret);
 
     if (result.success) {
       // Update auth user with new points

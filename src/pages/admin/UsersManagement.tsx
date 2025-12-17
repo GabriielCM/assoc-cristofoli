@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlus, Edit, Trash2, Search, Star, Shield } from 'lucide-react';
 import { Layout } from '../../components/layout';
-import { Card, Button, Badge, Modal, Input, Select, Alert, Loader } from '../../components/ui';
+import { Card, Button, Badge, Modal, Input, Select, Alert } from '../../components/ui';
 import { useStore } from '../../store/useStore';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import type { User, UserRole } from '../../types';
+import type { UserRole } from '../../types';
+
+type UserWithoutPassword = Omit<import('../../types').User, 'password'>;
 
 export const UsersManagement: React.FC = () => {
-  const { users, fetchUsers, addUser, updateUser, deleteUser, adjustUserPoints, isLoading } = useStore();
+  const { users, fetchUsers, addUser, updateUser, deleteUser, adjustUserPoints } = useStore();
 
   useEffect(() => {
     fetchUsers();
@@ -16,7 +18,7 @@ export const UsersManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showPointsModal, setShowPointsModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<UserWithoutPassword | null>(null);
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const [formData, setFormData] = useState({
@@ -57,12 +59,12 @@ export const UsersManagement: React.FC = () => {
     resetForm();
   };
 
-  const handleEdit = (user: User) => {
+  const handleEdit = (user: UserWithoutPassword) => {
     setEditingUser(user);
     setFormData({
       name: user.name,
       email: user.email,
-      password: user.password,
+      password: '',
       birthDate: user.birthDate,
       registration: user.registration,
       photo: user.photo,
@@ -108,7 +110,7 @@ export const UsersManagement: React.FC = () => {
     setEditingUser(null);
   };
 
-  const openPointsModal = (user: User) => {
+  const openPointsModal = (user: UserWithoutPassword) => {
     setPointsAdjustment({ userId: user.id, points: 0, reason: '' });
     setShowPointsModal(true);
   };

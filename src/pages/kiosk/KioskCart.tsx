@@ -55,20 +55,22 @@ export const KioskCart: React.FC = () => {
     setCart((prev) => prev.filter((i) => i.product.id !== productId));
   };
 
-  const handleGenerateQR = () => {
+  const handleGenerateQR = async () => {
     if (cart.length === 0 || isCreatingOrder) return;
     setIsCreatingOrder(true);
 
     const items = cart.map((item) => ({
       productId: item.product.id,
-      productName: item.product.name,
-      pricePoints: item.product.pricePoints,
       quantity: item.quantity
     }));
 
-    const order = createFridgeOrder(items);
-    sessionStorage.removeItem('kiosk-cart');
-    navigate(`/kiosk/payment/${order.id}`);
+    const order = await createFridgeOrder(items);
+    if (order) {
+      sessionStorage.removeItem('kiosk-cart');
+      navigate(`/kiosk/payment/${order.id}`);
+    } else {
+      setIsCreatingOrder(false);
+    }
   };
 
   useEffect(() => {

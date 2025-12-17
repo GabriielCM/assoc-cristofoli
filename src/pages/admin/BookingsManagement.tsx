@@ -39,7 +39,7 @@ export const BookingsManagement: React.FC = () => {
   );
 
   const handleConfirm = (bookingId: string) => {
-    updateBooking(bookingId, { status: 'confirmed' });
+    updateBooking(bookingId, 'confirmed');
     setAlert({ type: 'success', message: 'Locação confirmada com sucesso!' });
   };
 

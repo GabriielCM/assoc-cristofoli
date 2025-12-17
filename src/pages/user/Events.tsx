@@ -58,8 +58,7 @@ export const Events: React.FC = () => {
     };
   }, []);
 
-  const startScanner = async () => {
-    setScanning(true);
+  const initScanner = async () => {
     try {
       const html5QrCode = new Html5Qrcode('qr-reader');
       scannerRef.current = html5QrCode;
@@ -75,8 +74,10 @@ export const Events: React.FC = () => {
         },
         () => {}
       );
+      setScanning(true);
     } catch (err) {
-      setAlert({ type: 'error', message: 'Não foi possível acessar a câmera.' });
+      console.error('Camera error:', err);
+      setAlert({ type: 'error', message: 'Não foi possível acessar a câmera. Verifique as permissões do navegador.' });
       setScanning(false);
     }
   };
@@ -103,7 +104,7 @@ export const Events: React.FC = () => {
         return;
       }
 
-      const result = scanEventQR(user.id, selectedEvent.id, qrData.secret);
+      const result = await scanEventQR(selectedEvent.id, qrData.secret);
 
       if (result.success) {
         setAlert({ type: 'success', message: result.message });
@@ -123,10 +124,10 @@ export const Events: React.FC = () => {
   };
 
   useEffect(() => {
-    if (showScanner && !scanning) {
+    if (showScanner && !scanning && !scannerRef.current) {
       const timer = setTimeout(() => {
-        startScanner();
-      }, 500);
+        initScanner();
+      }, 100);
       return () => clearTimeout(timer);
     }
   }, [showScanner]);
