@@ -29,6 +29,7 @@ interface AppState {
   updateUser: (id: string, userData: Partial<User>) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
   getUserById: (id: string) => UserWithoutPassword | undefined;
+  fetchUserById: (id: string) => Promise<UserWithoutPassword | null>;
   getUserByRegistration: (registration: string) => Promise<UserWithoutPassword | null>;
   adjustUserPoints: (userId: string, points: number, reason: string) => Promise<void>;
 
@@ -55,7 +56,14 @@ interface AppState {
   getEventById: (id: string) => Event | undefined;
   refreshEventQRCode: (eventId: string) => Promise<void>;
   getActiveEvents: () => Event[];
-  scanEventQR: (eventId: string, qrSecret: string) => Promise<{ success: boolean; message: string; points?: number }>;
+  scanEventQR: (eventId: string, qrSecret: string) => Promise<{
+    success: boolean;
+    message: string;
+    points?: number;
+    totalPoints?: number;
+    scanCount?: number;
+    maxScans?: number;
+  }>;
 
   // Points actions
   fetchPointHistory: (userId: string) => Promise<void>;
@@ -144,6 +152,23 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   getUserById: (id) => get().users.find((u) => u.id === id),
+
+  fetchUserById: async (id) => {
+    try {
+      const user = await userService.getById(id);
+      // Update local cache
+      set((state) => {
+        const exists = state.users.some((u) => u.id === id);
+        if (exists) {
+          return { users: state.users.map((u) => (u.id === id ? user : u)) };
+        }
+        return { users: [...state.users, user] };
+      });
+      return user;
+    } catch {
+      return null;
+    }
+  },
 
   getUserByRegistration: async (registration) => {
     try {
@@ -350,7 +375,14 @@ export const useStore = create<AppState>()((set, get) => ({
   scanEventQR: async (eventId, qrSecret) => {
     try {
       const result = await eventService.scan(eventId, qrSecret);
-      return { success: result.success, message: `Parabéns! Você ganhou ${result.points} pontos!`, points: result.points };
+      return {
+        success: true,
+        message: `Parabéns! Você ganhou ${result.points} pontos!`,
+        points: result.points,
+        totalPoints: result.totalPoints,
+        scanCount: result.scanCount,
+        maxScans: result.maxScans,
+      };
     } catch (error) {
       return { success: false, message: error instanceof Error ? error.message : 'Erro ao escanear QR Code' };
     }
@@ -379,7 +411,13 @@ export const useStore = create<AppState>()((set, get) => ({
   transferPoints: async (toUserId, points) => {
     try {
       const result = await pointService.transfer(toUserId, points);
-      return { success: true, message: `${points} pontos transferidos com sucesso para ${result.toUser.name}!` };
+      // Refresh users to get updated balances
+      await get().fetchUsers();
+      return {
+        success: true,
+        message: `${points} pontos transferidos com sucesso para ${result.toUser.name}!`,
+        newBalance: result.newBalance
+      };
     } catch (error) {
       return { success: false, message: error instanceof Error ? error.message : 'Erro ao transferir pontos' };
     }

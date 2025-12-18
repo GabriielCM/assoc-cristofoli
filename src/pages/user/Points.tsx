@@ -46,15 +46,16 @@ const getTransactionBgColor = (type: PointTransactionType) => {
 export const Points: React.FC = () => {
   const navigate = useNavigate();
   const { events, fetchEvents, fetchUsers, fetchPointHistory, getUserPointHistory, users, getUserById } = useStore();
-  const { user } = useAuthStore();
+  const { user, refreshUser } = useAuthStore();
 
   useEffect(() => {
     fetchEvents();
     fetchUsers();
+    refreshUser(); // Refresh user to get latest points
     if (user) {
       fetchPointHistory(user.id);
     }
-  }, [fetchEvents, fetchUsers, fetchPointHistory, user]);
+  }, [fetchEvents, fetchUsers, fetchPointHistory, refreshUser, user]);
 
   if (!user) return null;
 

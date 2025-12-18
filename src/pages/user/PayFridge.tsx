@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import React, { useState, useCallback } from 'react';
 import { Camera, Star, ShoppingCart, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { Layout } from '../../components/layout';
 import { Card, Button, Modal, Alert } from '../../components/ui';
 import { useStore } from '../../store/useStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useQRScanner } from '../../hooks';
+import type { ScanResult } from '../../hooks';
 import type { FridgeOrderQRData } from '../../types';
+
+const QR_READER_CONTAINER_ID = 'qr-reader-pay';
 
 export const PayFridge: React.FC = () => {
   const { getFridgeOrderById, payFridgeOrder, getUserById } = useStore();
@@ -15,105 +18,86 @@ export const PayFridge: React.FC = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
-      }
-    };
-  }, []);
-
-  const initScanner = async () => {
-    try {
-      const html5QrCode = new Html5Qrcode('qr-reader-pay');
-      scannerRef.current = html5QrCode;
-
-      await html5QrCode.start(
-        { facingMode: 'environment' },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 }
-        },
-        (decodedText) => {
-          handleQRCodeScan(decodedText);
-        },
-        () => {}
-      );
-    } catch (err) {
-      console.error('Camera error:', err);
-      setAlert({ type: 'error', message: 'Nao foi possivel acessar a camera. Verifique as permissoes do navegador.' });
-      setScanning(false);
-    }
-  };
-
-  // Wait for DOM element to exist before starting scanner
-  useEffect(() => {
-    if (scanning && !scannerRef.current) {
-      const timer = setTimeout(() => {
-        initScanner();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [scanning]);
-
-  const startScanner = () => {
-    setScanning(true);
-    setAlert(null);
-  };
-
-  const stopScanner = async () => {
-    if (scannerRef.current) {
-      try {
-        await scannerRef.current.stop();
-      } catch {}
-      scannerRef.current = null;
-    }
-    setScanning(false);
-  };
-
-  const handleQRCodeScan = async (data: string) => {
+  // Callback de scan que valida o QR Code
+  const handleScan = useCallback(async (data: string): Promise<ScanResult> => {
     try {
       const qrData: FridgeOrderQRData = JSON.parse(data);
 
       if (qrData.type !== 'fridge_order') {
-        setAlert({ type: 'error', message: 'QR Code invalido. Escaneie um QR de pedido da geladeira.' });
-        return;
+        return { success: false, message: 'QR Code inválido. Escaneie um QR de pedido da geladeira.' };
       }
 
       const order = getFridgeOrderById(qrData.orderId);
 
       if (!order) {
-        setAlert({ type: 'error', message: 'Pedido nao encontrado.' });
-        return;
+        return { success: false, message: 'Pedido não encontrado.' };
       }
 
       if (order.status !== 'pending_payment') {
-        setAlert({ type: 'error', message: 'Este pedido ja foi pago ou cancelado.' });
-        return;
+        return { success: false, message: 'Este pedido já foi pago ou cancelado.' };
       }
 
       // Check if QR secret matches
       if (order.qrCodeSecret !== qrData.secret) {
-        setAlert({ type: 'error', message: 'QR Code invalido.' });
-        return;
+        return { success: false, message: 'QR Code inválido.' };
       }
 
       // Check if expired
       if (new Date(order.qrCodeExpiresAt) < new Date()) {
-        setAlert({ type: 'error', message: 'Este QR Code expirou. Faca um novo pedido no kiosk.' });
-        return;
+        return { success: false, message: 'Este QR Code expirou. Faça um novo pedido no kiosk.' };
       }
 
-      await stopScanner();
+      // Se passou nas validações, guardar o pedido e mostrar modal de confirmação
       setScannedOrder(order);
       setShowConfirmModal(true);
 
+      // Retornar sucesso para o hook parar o scanner
+      return { success: true, message: 'Pedido encontrado' };
+
     } catch {
-      setAlert({ type: 'error', message: 'QR Code invalido.' });
+      return { success: false, message: 'QR Code inválido.' };
     }
-  };
+  }, [getFridgeOrderById]);
+
+  // Usar o hook de QR Scanner
+  const {
+    status,
+    result: scanResult,
+    cameraEnabled,
+    start: startScanner,
+    stop: stopScanner,
+    reset: resetScanner,
+    tryAgain,
+  } = useQRScanner({
+    containerId: QR_READER_CONTAINER_ID,
+    onScan: handleScan,
+    enabled: scanning,
+  });
+
+  // Iniciar scanner
+  const handleStartScanner = useCallback(() => {
+    setScanning(true);
+    setAlert(null);
+
+    // Delay para o DOM estar pronto
+    setTimeout(() => {
+      startScanner();
+    }, 100);
+  }, [startScanner]);
+
+  // Parar scanner
+  const handleStopScanner = useCallback(async () => {
+    await stopScanner();
+    setScanning(false);
+  }, [stopScanner]);
+
+  // Mostrar alert se houver erro de scan
+  React.useEffect(() => {
+    if (status === 'error' && scanResult && !scanResult.success) {
+      setAlert({ type: 'error', message: scanResult.message });
+    }
+  }, [status, scanResult]);
 
   const handleConfirmPayment = async () => {
     if (!user || !scannedOrder) return;
@@ -134,17 +118,22 @@ export const PayFridge: React.FC = () => {
 
     setShowConfirmModal(false);
     setScannedOrder(null);
+    setScanning(false);
+    resetScanner();
   };
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setShowConfirmModal(false);
     setScannedOrder(null);
-  };
+    // Permitir escanear novamente
+    tryAgain();
+  }, [tryAgain]);
 
-  const resetPayment = () => {
+  const resetPayment = useCallback(() => {
     setPaymentSuccess(false);
     setAlert(null);
-  };
+    resetScanner();
+  }, [resetScanner]);
 
   const insufficientBalance = !!(scannedOrder && user && user.points < scannedOrder.totalPoints);
 
@@ -190,12 +179,23 @@ export const PayFridge: React.FC = () => {
 
               {scanning ? (
                 <div className="space-y-4">
-                  <div
-                    id="qr-reader-pay"
-                    className="w-full rounded-lg overflow-hidden bg-black"
-                    style={{ minHeight: '300px' }}
-                  />
-                  <Button variant="outline" fullWidth onClick={stopScanner}>
+                  <div className="relative bg-black rounded-lg overflow-hidden" style={{ minHeight: '300px' }}>
+                    {cameraEnabled && (
+                      <div
+                        id={QR_READER_CONTAINER_ID}
+                        className="w-full"
+                      />
+                    )}
+                    {!cameraEnabled && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                        <div className="text-center">
+                          <Camera className="w-12 h-12 mx-auto text-gray-400 mb-2" />
+                          <p className="text-gray-500">Iniciando câmera...</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <Button variant="outline" fullWidth onClick={handleStopScanner}>
                     <X className="w-4 h-4 mr-2" />
                     Cancelar
                   </Button>
@@ -204,9 +204,9 @@ export const PayFridge: React.FC = () => {
                 <div className="text-center py-8">
                   <Camera className="w-16 h-16 mx-auto text-gray-300 mb-4" />
                   <p className="text-gray-500 mb-4">
-                    Aponte a camera para o QR Code exibido no kiosk da geladeira
+                    Aponte a câmera para o QR Code exibido no kiosk da geladeira
                   </p>
-                  <Button onClick={startScanner}>
+                  <Button onClick={handleStartScanner}>
                     <Camera className="w-4 h-4 mr-2" />
                     Iniciar Scanner
                   </Button>
@@ -270,7 +270,7 @@ export const PayFridge: React.FC = () => {
               {/* Balance after payment */}
               {user && (
                 <div className="text-center text-sm text-gray-500">
-                  Saldo apos pagamento:{' '}
+                  Saldo após pagamento:{' '}
                   <strong className={insufficientBalance ? 'text-red-500' : ''}>
                     {user.points - scannedOrder.totalPoints} pontos
                   </strong>
