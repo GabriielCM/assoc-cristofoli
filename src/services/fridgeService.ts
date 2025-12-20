@@ -28,7 +28,15 @@ interface FridgeOrderWithItems extends FridgeOrder {
 export const fridgeService = {
   // Products
   async getProducts(): Promise<FridgeProduct[]> {
-    return api.get<FridgeProduct[]>('/fridge/products');
+    console.log('[fridgeService] Fetching products from API...');
+    try {
+      const products = await api.get<FridgeProduct[]>('/fridge/products');
+      console.log('[fridgeService] Got products:', products.length);
+      return products;
+    } catch (error) {
+      console.error('[fridgeService] Error fetching products:', error);
+      throw error;
+    }
   },
 
   async getAllProducts(): Promise<FridgeProduct[]> {

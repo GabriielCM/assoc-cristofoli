@@ -425,11 +425,14 @@ export const useStore = create<AppState>()((set, get) => ({
 
   // Fridge Product actions
   fetchFridgeProducts: async () => {
+    console.log('[Store] fetchFridgeProducts called');
     set({ isLoading: true, error: null });
     try {
       const products = await fridgeService.getProducts();
+      console.log('[Store] Got products:', products?.length, products);
       set({ fridgeProducts: products, isLoading: false });
     } catch (error) {
+      console.error('[Store] Error fetching products:', error);
       set({ error: error instanceof Error ? error.message : 'Erro ao carregar produtos', isLoading: false });
     }
   },

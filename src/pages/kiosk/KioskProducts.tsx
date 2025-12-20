@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Minus, ShoppingCart, Star, ArrowLeft } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Star, ArrowLeft, RefreshCw } from 'lucide-react';
 import { KioskLayout } from './KioskLayout';
-import { useStore } from '../../store/useStore';
 import type { FridgeCategory, FridgeProduct } from '../../types';
 
 interface CartItem {
@@ -17,13 +16,55 @@ const CATEGORY_TABS: { value: FridgeCategory | 'all'; label: string }[] = [
   { value: 'Refeicoes', label: 'Refeicoes' }
 ];
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
 export const KioskProducts: React.FC = () => {
   const navigate = useNavigate();
-  const { getActiveFridgeProducts } = useStore();
+  const [fridgeProducts, setFridgeProducts] = useState<FridgeProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<FridgeCategory | 'all'>('all');
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  const products = getActiveFridgeProducts();
+  const fetchProducts = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    const url = `${API_URL}/fridge/products`;
+    console.log('[KioskProducts] Fetching from:', url);
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('[KioskProducts] Response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('[KioskProducts] Got products:', data?.length, data);
+      setFridgeProducts(data || []);
+    } catch (err) {
+      console.error('[KioskProducts] Fetch error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+      setError(`Falha ao carregar: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  // Filter active products with stock
+  const products = fridgeProducts.filter((p) => p.isActive && p.stockQuantity > 0);
   const filteredProducts = selectedCategory === 'all'
     ? products
     : products.filter((p) => p.category === selectedCategory);
@@ -65,7 +106,6 @@ export const KioskProducts: React.FC = () => {
 
   const handleContinue = () => {
     if (cart.length === 0) return;
-    // Store cart in sessionStorage for the cart page
     sessionStorage.setItem('kiosk-cart', JSON.stringify(cart));
     navigate('/kiosk/cart');
   };
@@ -101,71 +141,99 @@ export const KioskProducts: React.FC = () => {
 
         {/* Products Grid */}
         <div className="flex-1 overflow-y-auto">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {filteredProducts.map((product) => {
-              const quantity = getCartQuantity(product.id);
-              const isOutOfStock = product.stockQuantity === 0;
-              const isMaxed = quantity >= product.stockQuantity;
-
-              return (
-                <div
-                  key={product.id}
-                  className={`bg-white rounded-xl p-4 shadow-sm ${isOutOfStock ? 'opacity-50' : ''}`}
-                >
-                  {product.image && (
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-32 object-cover rounded-lg mb-3"
-                    />
-                  )}
-                  <h3 className="font-semibold text-gray-800 truncate">{product.name}</h3>
-                  <div className="flex items-center gap-1 text-accent-500 mt-1">
-                    <Star className="w-4 h-4 fill-current" />
-                    <span className="font-bold">{product.pricePoints}</span>
-                    <span className="text-xs text-gray-500">pts</span>
-                  </div>
-
-                  {isOutOfStock ? (
-                    <p className="text-red-500 text-sm mt-3">Esgotado</p>
-                  ) : quantity > 0 ? (
-                    <div className="flex items-center justify-between mt-3">
-                      <button
-                        onClick={() => removeFromCart(product.id)}
-                        className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center hover:bg-gray-200"
-                      >
-                        <Minus className="w-5 h-5" />
-                      </button>
-                      <span className="text-xl font-bold">{quantity}</span>
-                      <button
-                        onClick={() => addToCart(product)}
-                        disabled={isMaxed}
-                        className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          isMaxed
-                            ? 'bg-gray-100 text-gray-400'
-                            : 'bg-primary-500 text-white hover:bg-primary-600'
-                        }`}
-                      >
-                        <Plus className="w-5 h-5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => addToCart(product)}
-                      className="w-full mt-3 bg-primary-500 text-white py-2 rounded-lg font-medium hover:bg-primary-600"
-                    >
-                      Adicionar
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {filteredProducts.length === 0 && (
+          {isLoading && (
             <div className="text-center py-12">
-              <p className="text-gray-500">Nenhum produto disponivel nesta categoria</p>
+              <div className="animate-spin w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-gray-500">Carregando produtos...</p>
             </div>
+          )}
+
+          {error && (
+            <div className="text-center py-12">
+              <p className="text-red-500 mb-4">{error}</p>
+              <p className="text-xs text-gray-400 mb-4">API: {API_URL}/fridge/products</p>
+              <button
+                onClick={fetchProducts}
+                className="inline-flex items-center gap-2 bg-primary-500 text-white px-6 py-2 rounded-lg hover:bg-primary-600"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Tentar novamente
+              </button>
+            </div>
+          )}
+
+          {!isLoading && !error && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {filteredProducts.map((product) => {
+                  const quantity = getCartQuantity(product.id);
+                  const isOutOfStock = product.stockQuantity === 0;
+                  const isMaxed = quantity >= product.stockQuantity;
+
+                  return (
+                    <div
+                      key={product.id}
+                      className={`bg-white rounded-xl p-4 shadow-sm ${isOutOfStock ? 'opacity-50' : ''}`}
+                    >
+                      {product.image && (
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-full h-32 object-cover rounded-lg mb-3"
+                        />
+                      )}
+                      <h3 className="font-semibold text-gray-800 truncate">{product.name}</h3>
+                      <div className="flex items-center gap-1 text-accent-500 mt-1">
+                        <Star className="w-4 h-4 fill-current" />
+                        <span className="font-bold">{product.pricePoints}</span>
+                        <span className="text-xs text-gray-500">pts</span>
+                      </div>
+
+                      {isOutOfStock ? (
+                        <p className="text-red-500 text-sm mt-3">Esgotado</p>
+                      ) : quantity > 0 ? (
+                        <div className="flex items-center justify-between mt-3">
+                          <button
+                            onClick={() => removeFromCart(product.id)}
+                            className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center hover:bg-gray-200"
+                          >
+                            <Minus className="w-5 h-5" />
+                          </button>
+                          <span className="text-xl font-bold">{quantity}</span>
+                          <button
+                            onClick={() => addToCart(product)}
+                            disabled={isMaxed}
+                            className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                              isMaxed
+                                ? 'bg-gray-100 text-gray-400'
+                                : 'bg-primary-500 text-white hover:bg-primary-600'
+                            }`}
+                          >
+                            <Plus className="w-5 h-5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => addToCart(product)}
+                          className="w-full mt-3 bg-primary-500 text-white py-2 rounded-lg font-medium hover:bg-primary-600"
+                        >
+                          Adicionar
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {filteredProducts.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">Nenhum produto disponivel nesta categoria</p>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Total carregados: {fridgeProducts.length} | Ativos com estoque: {products.length}
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
 

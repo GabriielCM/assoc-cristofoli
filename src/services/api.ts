@@ -1,4 +1,5 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+console.log('[API] Base URL:', API_URL);
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -44,22 +45,33 @@ class ApiClient {
       config.body = JSON.stringify(body);
     }
 
-    const response = await fetch(`${this.baseUrl}${endpoint}`, config);
+    const url = `${this.baseUrl}${endpoint}`;
+    console.log(`[API] ${method} ${url}`);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new ApiError(
-        errorData.error || 'Erro na requisição',
-        response.status,
-        errorData
-      );
+    try {
+      const response = await fetch(url, config);
+      console.log(`[API] Response status: ${response.status}`);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(
+          errorData.error || 'Erro na requisição',
+          response.status,
+          errorData
+        );
+      }
+
+      if (response.status === 204) {
+        return {} as T;
+      }
+
+      const data = await response.json();
+      console.log(`[API] Response data:`, data);
+      return data;
+    } catch (error) {
+      console.error(`[API] Network error:`, error);
+      throw error;
     }
-
-    if (response.status === 204) {
-      return {} as T;
-    }
-
-    return response.json();
   }
 
   get<T>(endpoint: string): Promise<T> {

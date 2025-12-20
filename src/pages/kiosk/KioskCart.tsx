@@ -12,9 +12,13 @@ interface CartItem {
 
 export const KioskCart: React.FC = () => {
   const navigate = useNavigate();
-  const { createFridgeOrder, getFridgeProductById } = useStore();
+  const { createFridgeOrder, fridgeProducts, fetchFridgeProducts } = useStore();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+
+  useEffect(() => {
+    fetchFridgeProducts();
+  }, [fetchFridgeProducts]);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('kiosk-cart');
@@ -23,7 +27,7 @@ export const KioskCart: React.FC = () => {
         const parsed = JSON.parse(stored);
         // Refresh product data from store
         const refreshedCart = parsed.map((item: CartItem) => {
-          const freshProduct = getFridgeProductById(item.product.id);
+          const freshProduct = fridgeProducts.find((p) => p.id === item.product.id);
           return freshProduct ? { product: freshProduct, quantity: item.quantity } : null;
         }).filter(Boolean);
         setCart(refreshedCart);
@@ -33,7 +37,7 @@ export const KioskCart: React.FC = () => {
     } else {
       navigate('/kiosk/products');
     }
-  }, [navigate, getFridgeProductById]);
+  }, [navigate, fridgeProducts]);
 
   const cartTotal = cart.reduce((sum, item) => sum + item.product.pricePoints * item.quantity, 0);
 
